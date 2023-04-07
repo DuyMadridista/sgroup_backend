@@ -1,6 +1,6 @@
 const express = require('express');
 const user_router = express.Router();
-
+const validateUser = require('./midleware').validateUser;
 // Danh sách user
 let users = [
     {
@@ -35,7 +35,7 @@ user_router.get('/:id', (req, res) => {
 });
 
 // Cập nhật thông tin user
-user_router.put('/:id', (req, res,) => {
+user_router.put('/:id',validateUser, (req, res,) => {
     const id = parseInt(req.params.id);
     const index = users.findIndex(u => u.id === id);
 
@@ -48,10 +48,16 @@ user_router.put('/:id', (req, res,) => {
 });
 
 // Thêm user mới
-user_router.post('/', (req, res) => {
+user_router.post('/',validateUser, (req, res) => {
     let id;
-    if (!req.body.id) {  id = users.length + 1 }
+    if (!req.body.id) {  id = users[users.length-1].id + 1 }
     else { id = parseInt(req.body.id) };
+    const isUserExists = users.some((user) => user.id === id);
+    if (isUserExists) {
+      // nếu user đã tồn tại, trả về lỗi 409 Conflict
+        res.status(409).send("User already exists");
+        return;
+    }
     const newUser = { id, ...req.body };
     users.push(newUser);
     res.status(201).json(newUser);
