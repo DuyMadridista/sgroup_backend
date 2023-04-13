@@ -1,73 +1,70 @@
 const express = require('express');
 const user_router = express.Router();
-const validateUser = require('./midleware').validateUser;
+const validateUser = require('../midleware/checkUser').validateUser;
+const connection = require("../database/connection");
 // Danh sách user
-let users = [
-    {
-        id: 1,
-        fullname: 'Nguyen Huy Tuong',
-        gender: true,
-        age: 18
-    },
-    {
-        id: 2,
-        fullname: 'Nguyen Thi Tuong',
-        gender: false,
-        age: 15
-    }
-];
+// let users = [
+//     {
+//         id: 1,
+//         fullname: 'Nguyen Huy Tuong',
+//         gender: true,
+//         age: 18
+//     },
+//     {
+//         id: 2,
+//         fullname: 'Nguyen Thi Tuong',
+//         gender: false,
+//         age: 15
+//     }
+// ];
 
 // Lấy danh sách user
 user_router.get('/', (req, res) => {
-    res.status(200).json(users);
+    connection.query("SELECT * FROM user", (err, result) => {
+        if (err) throw err;
+
+        res.send(result);
+    });
 });
 
 // Lấy chi tiết user
 user_router.get('/:id', (req, res) => {
     const id = parseInt(req.params.id);
-    const user = users.find(u => u.id === id);
-
-    if (user) {
-        res.status(200).json(user);
-    } else {
-        res.status(404).json({ message: 'User not found' });
-    }
+    connection.query("SELECT * FROM user WHERE id = ?", [id], (err, result) => {
+        if (err) res.status(404).json({ message: 'User not found' });
+        else{
+            res.status(200).json(result);
+        } 
+    })
 });
 
 // Cập nhật thông tin user
-user_router.put('/:id',validateUser, (req, res,) => {
+user_router.put('/:id', validateUser, (req, res,) => {
     const id = parseInt(req.params.id);
-    const index = users.findIndex(u => u.id === id);
-
-    if (index !== -1) {
-        users[index] = { id, ...req.body };
-        res.status(204).send();
-    } else {
-        res.status(404).json({ message: 'User not found' });
-    }
+    connection.query("UPDATE user SET name = ?, age = ?, gender=?, class_id = ? WHERE id = ?", [req.body.name, req.body.age, req.body.gender, req.body.class_id, id],
+        (err, result) => {
+            if(err) res.status(404).json({ message: 'User not found' });
+            else res.status(200).json({ message: 'User updated' });
+    })
 });
 
 // Thêm user mới
 user_router.post('/',validateUser, (req, res) => {
-    let id;
-    if (!req.body.id) {  id = users[users.length-1].id + 1 }
-    else { id = parseInt(req.body.id) };
-    const isUserExists = users.some((user) => user.id === id);
-    if (isUserExists) {
-      // nếu user đã tồn tại, trả về lỗi 409 Conflict
-        res.status(409).send("User already exists");
-        return;
-    }
-    const newUser = { id, ...req.body };
-    users.push(newUser);
-    res.status(201).json(newUser);
+    connection.query("INSERT INTO user (name, age, gender, class_id) VALUES (?, ?, ?, ?)", [req.body.name, req.body.age, req.body.gender, req.body.class_id],
+        (err, result) => {
+            if(err) res.status(404).json({ message: 'User not found' });
+            else res.status(200).json({ message: 'User added' });
+    })
 });
 
 // Xóa user
 user_router.delete('/:id', (req, res) => {
     const id = parseInt(req.params.id);
-    users = users.filter(u => u.id !== id);
-    res.status(204).send();
+    connection.query("DELETE FROM user WHERE id = ?", [id],
+    (err, result) => {
+        if(err) res.status(404).json({ message: 'User not found' });
+        else res.status(200).json({ message: 'User deleted' });
+    })
 });
 // Exports cho biến user_router
 module.exports = user_router;
