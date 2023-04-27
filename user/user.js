@@ -68,3 +68,4 @@ user_router.delete('/:id', (req, res) => {
 });
 // Exports cho biến user_router
 module.exports = user_router;
+
