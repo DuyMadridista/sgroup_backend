@@ -7,10 +7,10 @@ const connection = mysql.createConnection({
   database: 'duy' // tên cơ sở dữ liệu
 });
 
-connection.connect(function (err) {
-    if (err) console.log("not connect");
-    console.log('Connected!');
-});
+// connection.connect(function (err) {
+//     if (err) console.log("not connect");
+//     console.log('Connected!');
+// });
 
 module.exports = connection;
 
