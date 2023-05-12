@@ -12,6 +12,8 @@ const router = express.Router();
 const userService = new UserService(db);
 const userController = new UserController(userService);
 
+router.post('/forgot-password', (req, res) => userController.forgotPassword(req, res));
+router.post('/reset-password', (req, res) => userController.ResetPassword(req, res));
 router.post('/register', validateUser, (req, res) => userController.register(req, res));
 router.post('/login', (req, res) => userController.login(req, res));
 router.put('/myuser/:id', validateUser, (req, res) => userController.update(req, res));
