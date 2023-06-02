@@ -1,5 +1,5 @@
 const express = require('express');
-const userRoute = require('./user/user')
+const userRoute = require('./userManager/userManager')
 const authRoute= require('./login/route')
 const bodyParser = require('body-parser');
 const morgan = require('morgan');

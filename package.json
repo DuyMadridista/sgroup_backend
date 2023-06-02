@@ -4,7 +4,8 @@
   "description": "ds",
   "main": "app.js",
   "scripts": {
-    "test": "nothing"
+    "test": "nothing",
+    "start": "nodemon index.js"
   },
   "repository": {
     "type": "git",
@@ -18,9 +19,12 @@
   "dependencies": {
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
+    "knex": "^2.4.2",
     "morgan": "^1.10.0",
     "mysql": "^2.18.1",
     "mysql2": "^3.2.0",
-    "nodemailer": "^6.9.1"
+    "nodemailer": "^6.9.1",
+    "nodemon": "^2.0.22",
+    "pg": "^8.11.0"
   }
 }
