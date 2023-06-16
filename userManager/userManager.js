@@ -1,10 +1,12 @@
 const express = require('express');
 const user_router = express.Router();
 const validateUser = require('../midleware/checkUser').validateUser;
-const connection = require("../database/connection");
+//const connection = require("../database/connection");
 const knex = require("../database/knex");
 const jsonwebtoken = require('jsonwebtoken');
 const date = new Date();
+const env = require('dotenv');
+env.config();
 
 // Lấy danh sách user
 user_router.get('/', (req, res) => {
@@ -56,13 +58,14 @@ user_router.get('/id/:id', (req, res) => {
         throw err;
     });
 });
-
+//console.log(process.env.secretKey);
 // Thêm user mới
 user_router.post('/', validateUser, (req, res) => {
     const author1 = req.headers.authorization;
     const author = author1.substring(7);
     //console.log(author);
-    const id = jsonwebtoken.verify(author, "duySgroupSecret").id;
+    // add biến môi trường ?????/
+    const id = jsonwebtoken.verify(author, process.env.secretKey).id;
     //console.log(id);
 
     const { name, age, gender, password, email, username } = req.body;
