@@ -1,15 +1,17 @@
 const express = require('express');
 const user_router = express.Router();
 const validateUser = require('../midleware/checkUser').validateUser;
-//const connection = require("../database/connection");
+const checkAccess = require('../midleware/checkUser').checkAccess;
 const knex = require("../database/knex");
 const jsonwebtoken = require('jsonwebtoken');
-const date = new Date();
+const { hashPass } = require('../helper/hashing')
 const env = require('dotenv');
 env.config();
 
+
+
 // Lấy danh sách user
-user_router.get('/', (req, res) => {
+user_router.get('/',checkAccess("View user"), (req, res) => {
     let pageNumber = req.query.page;
     const PAGE_SIZE = 2;
     if (pageNumber) {
@@ -37,20 +39,10 @@ user_router.get('/', (req, res) => {
                 throw err;
             });
     }
-
 });
-// search by name
-user_router.get('/search/:name', (req, res) => {
-    const name = req.params.name;
-    knex.select('*').from('user').where('name', 'like', `%${name}%`)
-        .then((result) => {
-            res.send(result);
-        }).catch((err) => {
-            throw err;
-        });
-})
+
 // Lấy chi tiết user
-user_router.get('/id/:id', (req, res) => {
+user_router.get('/id/:id',checkAccess("View user"), (req, res) => {
     const id = parseInt(req.params.id);
     knex.select('*').from('user').where('id', id).then((result) => {
         res.send(result);
@@ -58,84 +50,90 @@ user_router.get('/id/:id', (req, res) => {
         throw err;
     });
 });
-//console.log(process.env.secretKey);
-// Thêm user mới
-user_router.post('/', validateUser, (req, res) => {
-    const author1 = req.headers.authorization;
-    const author = author1.substring(7);
-    //console.log(author);
-    // add biến môi trường ?????/
-    const id = jsonwebtoken.verify(author, process.env.secretKey).id;
-    //console.log(id);
 
-    const { name, age, gender, password, email, username } = req.body;
-    if (id) {
-        knex('user').insert({
-            name: name,
-            age: age,
-            gender: gender,
-            password: password,
-            email: email,
-            username: username,
-            CreatedAt: date.toISOString().slice(0, 19).replace('T', ' '),
-            createdby: id
-        }).then(() => {
-            res.status(200).json({ message: 'User added' });
+// Thêm user mới
+user_router.post('/', validateUser, checkAccess("Add user"), async (req, res) => {
+    const author = req.headers.authorization.substring(7);
+    const id = jsonwebtoken.verify(author, process.env.secretKey).id;
+    //const role = jsonwebtoken.verify(author, process.env.secretKey).role;
+    const { name, age, gender, password, email, username, userRole } = req.body;
+    const { hashPassword, salt } = hashPass(password);
+            const createdAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+            try {
+                const insertedUserIds = await knex('user').insert({
+                    name: name,
+                    age: age,
+                    gender: gender,
+                    password: hashPassword,
+                    salt: salt,
+                    email: email,
+                    username: username,
+                    CreatedAt: createdAt,
+                    createdby: id
+                });
+
+                const userId = insertedUserIds[0]; // Lấy ID của người dùng đã được chèn
+
+                // Thêm vai trò của người dùng vào bảng user_role
+                await knex('user_roles').insert({
+                    user_id: userId,
+                    role_id: userRole
+                });
+
+                res.status(200).json({ message: 'User added' });
+            } catch (error) {
+                console.error(error);
+                res.status(500).json({ message: 'Failed to add user' });
+            }
+        } 
+);
+
+
+// Cập nhật thông tin user
+user_router.put('/:id', validateUser, checkAccess("Edit user"), async (req, res) => {
+    const id = parseInt(req.params.id);
+    // Kiểm tra quyền truy cập
+        const updatedUser = {
+            name: req.body.name,
+            age: req.body.age,
+            gender: req.body.gender,
+            email: req.body.email,
+            username: req.body.username,
+            CreatedAt: new Date().toISOString().slice(0, 19).replace('T', ' ')
+        };
+        try {
+            await knex('user').where('id', id).update(updatedUser);
+            // Thay đổi vai trò của người dùng trong bảng user_role
+            if (req.body.role) {
+                const newRoleId = req.body.role; // ID của vai trò mới
+                
+                    // Vai trò mới tồn tại, cập nhật vai trò của người dùng trong bảng user_role
+                await knex('user_role')
+                        .where('user_id', id)
+                        .update({ role_id: newRoleId });
+
+                res.status(200).json({ message: 'User updated' });
+                } 
+            else {
+                res.status(200).json({ message: 'User updated' });
+            }
+        } catch (error) {
+            console.error(error);
+            res.status(404).json({ message: 'User not found' });
+        }
+    });
+
+
+// Xóa user
+user_router.delete('/:id', checkAccess("Delete user"),async (req, res) => {
+    const id = parseInt(req.params.id);
+        knex('user').where('id', id).del().then(() => {
+            res.status(200).json({ message: 'User deleted' });
         }).catch((err) => {
             console.log(err);
             res.status(404).json({ message: 'User not found' });
         });
-    }
-});
-// Cập nhật thông tin user
-user_router.put('/:id', validateUser, (req, res,) => {
-    const id = parseInt(req.params.id);
-    knex('user').where('id', id).update({
-        name: req.body.name,
-        age: req.body.age,
-        gender: req.body.gender,
-        email: req.body.email,
-        username: req.body.username,
-        CreatedAt: date.toISOString().slice(0, 19).replace('T', ' ')
-    }).then(() => {
-        res.status(200).json({ message: 'User updated' });
-    }).catch((err) => {
-        console.log(err);
-        res.status(404).json({ message: 'User not found' });
     });
-});
 
-// Xóa user
-user_router.delete('/:id', (req, res) => {
-    const id = parseInt(req.params.id);
-    knex('user').where('id', id).del().then(() => {
-        res.status(200).json({ message: 'User deleted' });
-    }).catch((err) => {
-        console.log(err);
-        res.status(404).json({ message: 'User not found' });
-    });
-});
 // Exports cho biến user_router
 module.exports = user_router;
-
-
-
-
-// Cập nhật thông tin user
-// user_router.put('/:id', validateUser, (req, res,) => {
-//     const id = parseInt(req.params.id);
-//     connection.query("UPDATE user SET name = ?, age = ?, gender=?, class_id = ? WHERE id = ?", [req.body.name, req.body.age, req.body.gender, req.body.class_id, id],
-//         (err, result) => {
-//             if (err) res.status(404).json({ message: 'User not found' });
-//             else res.status(200).json({ message: 'User updated' });
-//         })
-// });
-// Xóa user
-// user_router.delete('/:id', (req, res) => {
-//     const id = parseInt(req.params.id);
-//     connection.query("DELETE FROM user WHERE id = ?", [id],
-//         (err, result) => {
-//             if (err) res.status(404).json({ message: 'User not found' });
-//             else res.status(200).json({ message: 'User deleted' });
-//         })
-// });

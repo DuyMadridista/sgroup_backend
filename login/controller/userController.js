@@ -27,7 +27,8 @@ class UserController {
             if (error.message === 'User not found' || error.message === 'Incorrect password') {
                 res.status(400).json({ message: error.message });
             } else {
-                res.status(500).json({ message: 'Failed to login' });
+                console.log(error.message);
+                res.status(500).json({ message: error.message });
             }
         }
     }

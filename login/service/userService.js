@@ -43,38 +43,43 @@ class UserService {
             throw new Error('Failed to register user');
         }
     }
-
+    
     async loginUser(username, password) {
-        // Check if the user exists
-        const rows = await this.db.promise().query(
-            'select * from user where username=?', [username]
-        );
-        
-        const row = rows[0];
-        const user = row[0];
-        console.log(user);
-        if (!user) {
-            throw new Error('User not found');
-        }
-        // Check if the password is correct
+    // Kiểm tra xem người dùng có tồn tại không và lấy thông tin người dùng từ cơ sở dữ liệu
+    const rows = await this.db.promise().query(
+        'SELECT u.id, u.username, u.name, u.age, u.email, u.gender, u.Salt, u.password, r.id AS role FROM User u JOIN User_Roles ur ON u.id = ur.user_id JOIN Roles r ON ur.role_id = r.id WHERE u.username = ?',
+        [username]
+    );
+
+    const row = rows[0];
+    const user = row[0];
+
+    if (!user) {
+        throw new Error('User not found');
+    }
+
+    // Check if the password is correct
         const hashPassword = hashPass(password, user.Salt).hashPassword;
+        //console.log(hashPassword);
         if (hashPassword !== user.password) {
             throw new Error('Incorrect password');
         }
 
-        // Create and return token
-        const token = jsonwebtoken.sign({
-            id: user.id,
-            username: user.username,
-            name: user.name,
-            age: user.age,
-            email: user.email,
-            gender: user.gender
-        }, secretKey);
+    // Tạo và trả về token với vai trò (role)
+    const token = jsonwebtoken.sign({
+        id: user.id,
+        username: user.username,
+        password:user.password,
+        name: user.name,
+        age: user.age,
+        email: user.email,
+        gender: user.gender,
+        role: user.role // Lấy vai trò từ kết quả truy vấn
+    }, secretKey);
 
-        return token;
+    return token;
     }
-
+    
     async updateUser(userId, data) {
         const result = await this.db.promise().query(
             "UPDATE user SET name = ?, age = ?, gender = ? , passwordResetExpiration= ?, passwordResetToken= ? WHERE id = ?",
