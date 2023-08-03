@@ -13,10 +13,10 @@ env.config();
 // Lấy danh sách user
 user_router.get('/',checkAccess("View user"), (req, res) => {
     let pageNumber = req.query.page;
-    const PAGE_SIZE = 2;
+    const PAGE_SIZE = req.query.pagesize||2;
     if (pageNumber) {
         // pagination
-        pageNumber = parseInt(pageNumber) - 1;
+        pageNumber = parseInt(pageNumber);
         if (pageNumber > 0) {
             const skip = pageNumber * PAGE_SIZE
             knex.select('*').from('user').limit(PAGE_SIZE).offset(skip)

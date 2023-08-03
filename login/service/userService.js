@@ -13,21 +13,22 @@ class UserService {
         );
     }
     async registerUser(user) {
-        // Check if username is already exist
-        
+        // Check if username already exists
         const rows = await this.db.promise().query(
-            'select * from user where username=?', [user.username]
+            'SELECT * FROM user WHERE username=?',
+            [user.username]
         );
-        console.log(rows[0]);
+
         if (rows[0].length > 0) {
-            throw new Error('Username already exists');
+            throw new Error('Tên người dùng đã tồn tại');
         }
-        // hash password
+
+        // Hash password
         const { hashPassword, salt } = hashPass(user.password);
 
-        // insert user into database
-        const result = await this.db.promise().query(
-            `insert into user(username,name,salt,password,age,email,gender) value(?,?,?,?,?,?,?)`,
+        // Insert user into the database
+        const result = await this.db.promise().query(`
+            INSERT INTO user(username, name, salt, password, age, email, gender) VALUES(?, ?, ?, ?, ?, ?, ?)`,
             [
                 user.username,
                 user.name,
@@ -38,9 +39,18 @@ class UserService {
                 user.gender,
             ]
         );
-        console.log("duy +" + result);
-        if (result.affectedRows === 0) {
-            throw new Error('Failed to register user');
+
+        // Get the newly inserted user_id
+        const userId = result[0].insertId;
+
+        // Insert the user_id and role_id=1 into user_roles table
+        await this.db.promise().query(`
+            INSERT INTO user_roles(user_id, role_id) VALUES(?, 1)`,
+            [userId]
+        );
+
+        if (result[0].affectedRows === 0) {
+            throw new Error('Đăng kí người dùng thất bại');
         }
     }
     
