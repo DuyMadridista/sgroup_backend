@@ -4,35 +4,45 @@ const validateUser = require('../midleware/checkUser').validateUser;
 const checkAccess = require('../midleware/checkUser').checkAccess;
 const knex = require("../database/knex");
 const jsonwebtoken = require('jsonwebtoken');
+const upload = require('../multerConfig');
 const { hashPass } = require('../helper/hashing')
 const env = require('dotenv');
+var FormData = require('form-data');
 env.config();
 
+user_router.use(express.json());
+user_router.use(express.urlencoded({ extended: true }));
 
-
-// Lấy danh sách user
-user_router.get('/',checkAccess("View user"), (req, res) => {
+user_router.get('/', checkAccess("View user"), (req, res) => {
     let pageNumber = req.query.page;
-    const PAGE_SIZE = req.query.pagesize||2;
+    const PAGE_SIZE = req.query.pagesize || 2;
     if (pageNumber) {
         // pagination
         pageNumber = parseInt(pageNumber);
         if (pageNumber > 0) {
-            const skip = pageNumber * PAGE_SIZE
-            knex.select('*').from('user').limit(PAGE_SIZE).offset(skip)
+            const skip = pageNumber * PAGE_SIZE;
+            knex
+                .select('user.*', 'roles.name as role_name') // Lấy thông tin từ cả bảng user và bảng user_roles
+                .from('user')
+                .leftJoin('user_roles', 'user.id', 'user_roles.user_id') // LEFT JOIN để kết hợp bảng user_roles
+                .leftJoin('roles', 'user_roles.role_id', 'roles.id') // LEFT JOIN để kết hợp bảng roles
+                .limit(PAGE_SIZE)
+                .offset(skip)
                 .then((result) => {
                     res.send(result);
                 }).catch((err) => {
                     throw err;
                 });
-        }
-        else {
+        } else {
             res.status(400).send("Số trang không hợp lệ");
         }
-    }
-    else {
+    } else {
         //get all
-        knex.select('*').from('user')
+        knex
+            .select('user.*', 'roles.name as role_name') // Lấy thông tin từ cả bảng user và bảng user_roles
+            .from('user')
+            .leftJoin('user_roles', 'user.id', 'user_roles.user_id') // LEFT JOIN để kết hợp bảng user_roles
+            .leftJoin('roles', 'user_roles.role_id', 'roles.id') // LEFT JOIN để kết hợp bảng roles
             .then((result) => {
                 res.send(result);
             }).catch((err) => {
@@ -41,22 +51,37 @@ user_router.get('/',checkAccess("View user"), (req, res) => {
     }
 });
 
+
 // Lấy chi tiết user
-user_router.get('/id/:id',checkAccess("View user"), (req, res) => {
+user_router.get('/id/:id', checkAccess("View user"), async (req, res) => {
     const id = parseInt(req.params.id);
-    knex.select('*').from('user').where('id', id).then((result) => {
-        res.send(result);
-    }).catch((err) => {
-        throw err;
-    });
+
+    try {
+        const result = await knex
+            .select('user.*', 'user_roles.role_id as role')
+            .from('user')
+            .leftJoin('user_roles', 'user.id', 'user_roles.user_id')
+            .where('user.id', id);
+
+        if (result.length > 0) {
+            res.send(result);
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'An error occurred: ' +err.message });
+    }
 });
 
+
 // Thêm user mới
-user_router.post('/', validateUser, checkAccess("Add user"), async (req, res) => {
+user_router.post('/', upload.single('avatar'), validateUser, checkAccess("Add user"), async (req, res) => {
     const author = req.headers.authorization.substring(7);
     const id = jsonwebtoken.verify(author, process.env.secretKey).id;
-    //const role = jsonwebtoken.verify(author, process.env.secretKey).role;
-    const { name, age, gender, password, email, username, userRole } = req.body;
+    const { name, age, gender, password, email, username, userRole, status } = req.body;
+    console.log(req.body);
+    const avatarFilename = req.file ? req.file.filename : null;
     const { hashPassword, salt } = hashPass(password);
             const createdAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
             try {
@@ -69,7 +94,9 @@ user_router.post('/', validateUser, checkAccess("Add user"), async (req, res) =>
                     email: email,
                     username: username,
                     CreatedAt: createdAt,
-                    createdby: id
+                    createdby: id,
+                    status: status,
+                    avt: avatarFilename
                 });
 
                 const userId = insertedUserIds[0]; // Lấy ID của người dùng đã được chèn
@@ -99,6 +126,7 @@ user_router.put('/:id', validateUser, checkAccess("Edit user"), async (req, res)
             gender: req.body.gender,
             email: req.body.email,
             username: req.body.username,
+            status: req.body.status,
             CreatedAt: new Date().toISOString().slice(0, 19).replace('T', ' ')
         };
         try {
@@ -106,13 +134,11 @@ user_router.put('/:id', validateUser, checkAccess("Edit user"), async (req, res)
             // Thay đổi vai trò của người dùng trong bảng user_role
             if (req.body.role) {
                 const newRoleId = req.body.role; // ID của vai trò mới
-                
-                    // Vai trò mới tồn tại, cập nhật vai trò của người dùng trong bảng user_role
-                await knex('user_role')
+                await knex('user_roles')
                         .where('user_id', id)
                         .update({ role_id: newRoleId });
 
-                res.status(200).json({ message: 'User updated' });
+                res.status(200).json({ message: 'User +role updated' });
                 } 
             else {
                 res.status(200).json({ message: 'User updated' });

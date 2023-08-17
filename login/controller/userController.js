@@ -73,14 +73,14 @@ class UserController {
             // Lấy thông tin user từ email
             const users = await this.userService.getEmail(mailTo);
             const user = users[0];
-            //console.log(user);
+            console.log(user);
             if (!user) {
                 return res.status(400).json({ message: "Email not found" });
             }
 
             // Tạo và lưu thông tin về token và expiration token trong database
             const token = await this.userService.createRandomToken();
-            console.log(token);
+            //console.log(token);
             
             const passwordResetExpiration = new Date(Date.now() + 10 * 60 * 1000);
             const data = {
@@ -115,11 +115,15 @@ class UserController {
         const { email, passwordResetToken, newPassword } = req.body;
         console.log(email);
         try {
+            console.log(passwordResetToken);
+
             const user = await this.userService.FindUserToResetPass(email, passwordResetToken)
+            console.log(user);
             if (!user) {
                 return res.status(400).json({ message: 'User not found' });
             }
             try {
+                console.log(newPassword);
                 await this.userService.updatePass(email, newPassword)
                 res.send({ message: 'Update password successfully' });
             }
