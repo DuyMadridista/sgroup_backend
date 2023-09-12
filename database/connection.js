@@ -1,10 +1,11 @@
 const mysql = require('mysql2');
 
 const connection = mysql.createConnection({
-  host: '127.0.0.1', // địa chỉ host của MySQL
-  user: 'root', // tên đăng nhập
+  host: '122.248.225.255', // địa chỉ host của MySQL
+  user: 'duy432003', // tên đăng nhập
   password: 'duy432003', // mật khẩu đăng nhập
-  database: 'duy' // tên cơ sở dữ liệu
+  database: 'duy', // tên cơ sở dữ liệu
+  port: 3307
 });
 
 // connection.connect(function (err) {

@@ -1,0 +1,46 @@
+version: '3'
+
+services:
+  app_server:
+    build:
+        context: .
+        dockerfile: ./Dockerfile
+    tty: true
+    container_name: app-api
+    ports:
+      - "4001:3000"
+    volumes:
+      - ./:/var/www
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+    environment: 
+      - DB_HOST=mysql
+      - DB_PASSWORD=duy432003
+      - DB_NAME=duy
+      - DB_USERNAME=root
+    networks:
+      - example-network
+  mysql:
+    image: mysql:8.0
+    container_name: app-sql
+    restart: 'always'
+    environment:
+      MYSQL_ROOT_PASSWORD: duy432003
+      MYSQL_DATABASE: duy
+      MYSQL_USER: duy432003
+      MYSQL_PASSWORD: duy432003
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+    ports:
+      - 3307:3306
+    volumes:
+      - ./docker/mysql/data:/var/lib/mysql
+    networks:
+      - example-network
+
+networks:
+  example-network:

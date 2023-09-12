@@ -21,8 +21,8 @@ async function kiemTraQuyenTruyCap(role, permission) {
     console.log("ahfbdb"+role);
     // Lấy danh sách quyền cho vai trò từ cơ sở dữ liệu hoặc thông tin đăng nhập
     const rows = await knex('role_permissions')
-        .select('Permissions.name')
-        .join('Permissions', 'role_permissions.permission_id', '=', 'Permissions.id')
+        .select('permissions.name')
+        .join('permissions', 'role_permissions.permission_id', '=', 'permissions.id')
         .where('role_permissions.role_id', role);
     // Lấy danh sách quyền từ kết quả truy vấn
     const Roles = rows.map(row => row.name);

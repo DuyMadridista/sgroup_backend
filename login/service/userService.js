@@ -60,7 +60,7 @@ class UserService {
     async loginUser(username, password) {
         // Kiểm tra xem người dùng có tồn tại không và lấy thông tin người dùng từ cơ sở dữ liệu
         const rows = await this.db.promise().query(
-            'SELECT u.id, u.username, u.name, u.age, u.email, u.gender,u.avt, u.Salt, u.password, r.id AS role FROM User u JOIN User_Roles ur ON u.id = ur.user_id JOIN Roles r ON ur.role_id = r.id WHERE u.username = ?',
+            'SELECT u.id, u.username, u.name, u.age, u.email, u.gender,u.avt, u.Salt, u.password, r.id AS role FROM user u JOIN user_roles ur ON u.id = ur.user_id JOIN roles r ON ur.role_id = r.id WHERE u.username = ?',
             [username]
         );
 
@@ -89,8 +89,7 @@ class UserService {
             gender: user.gender,
             role: user.role,
             avt: user.avt,
-        }, secretKey);
-        //console.log(token);
+        }, secretKey, { expiresIn: "30d" });
         return token;
     }
 

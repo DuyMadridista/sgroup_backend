@@ -7,6 +7,7 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const morgan = require('morgan');
 const roleRoute = require('./roleManagerment/roleRoute');
+const { authenticateToken }= require('./midleware/checkToken')
 require('dotenv').config();
 const app = express();
 const cors = require('cors');
@@ -19,7 +20,7 @@ app.use(morgan('combined'))
 // login-- self-manager
 app.use('/auth',authRoute)
 //User manager
-app.use('/user', userRoute);
+app.use('/user', authenticateToken, userRoute);
 // poll
 app.use('/poll', pollRoute);
 //pollClient
@@ -29,5 +30,5 @@ app.use('/role', roleRoute)
 app.use('/assets/img', express.static(path.join(__dirname, 'assets/img')));
 // Khởi động server
 app.listen(3000, () => {
-    console.log('Server is running on port 3000 duy');
+    console.log('Server is running on port 4001 duy');
 });
