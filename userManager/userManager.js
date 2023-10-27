@@ -140,6 +140,7 @@ user_router.post('/', upload.single('avatar'), validateUser, checkAccess("Add us
     const avatarFilename = req.file ? req.file.filename : null;
     const { hashPassword, salt } = hashPass(password);
     const createdAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    
     try {
         const insertedUserIds = await knex('user').insert({
             name: name,
